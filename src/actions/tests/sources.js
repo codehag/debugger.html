@@ -51,6 +51,15 @@ describe("sources", () => {
     expect(jquery.get("id")).to.equal("jquery.js");
   });
 
+  it.only("should add a pending breakpoint ", () => {
+    const { dispatch, getState } = createStore();
+    dispatch(actions.newSource(makeSource("base.js")));
+
+    expect(getSources(getState()).size).to.equal(1);
+    const base = getSource(getState(), "base.js");
+    expect(base.get("id")).to.equal("base.js");
+  });
+
   it("should select a source", () => {
     // Note that we pass an empty client in because the action checks
     // if it exists.
