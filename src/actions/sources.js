@@ -49,27 +49,29 @@ function checkSelectedSource(state, dispatch, source) {
 function checkPendingBreakpoints(state, dispatch, source) {
   const pendingBreakpoints = getPendingBreakpoints(state);
 
-  if (pendingBreakpoints) {
-    pendingBreakpoints.forEach(pendingBreakpoint => {
-      const {
-        location: { line, sourceUrl, column },
-        condition
-      } = pendingBreakpoint;
-      const sameSource = sourceUrl && sourceUrl == source.url;
-
-      const location = { sourceId: source.id, sourceUrl, line, column };
-
-      const bp = getBreakpoint(state, location);
-
-      if (sameSource && !bp) {
-        if (location.column && isEnabled("columnBreakpoints")) {
-          dispatch(addBreakpoint(location, { condition }));
-        } else {
-          dispatch(addBreakpoint(location, { condition }));
-        }
-      }
-    });
+  if (!pendingBreakpoints) {
+    return;
   }
+
+  pendingBreakpoints.forEach(pendingBreakpoint => {
+    const {
+      location: { line, sourceUrl, column },
+      condition
+    } = pendingBreakpoint;
+    const sameSource = sourceUrl && sourceUrl == source.url;
+
+    const location = { sourceId: source.id, sourceUrl, line, column };
+
+    const bp = getBreakpoint(state, location);
+
+    if (sameSource && !bp) {
+      if (location.column && isEnabled("columnBreakpoints")) {
+        dispatch(addBreakpoint(location, { condition }));
+      } else {
+        dispatch(addBreakpoint(location, { condition }));
+      }
+    }
+  });
 }
 
 /**

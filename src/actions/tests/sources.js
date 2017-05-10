@@ -12,6 +12,9 @@ const {
   getSourceText,
   getSourceTabs
 } = selectors;
+import fromJS from "../../utils/fromJS";
+import I from "immutable";
+import { makePendingBreakpoint } from "../../reducers/breakpoints";
 
 const threadClient = {
   sourceContents: function(sourceId) {
@@ -51,13 +54,43 @@ describe("sources", () => {
     expect(jquery.get("id")).to.equal("jquery.js");
   });
 
-  it.only("should add a pending breakpoint ", () => {
-    const { dispatch, getState } = createStore();
-    dispatch(actions.newSource(makeSource("base.js")));
+  it.only("should add a pending breakpoint ", async () => {
+    const { dispatch, getState } = createStore(
+      {
+        setBreakpoint: (location, condition) => {
+          return new Promise((resolve, reject) => {
+            resolve({ id: "hi", actualLocation: location });
+          });
+        }
+      },
+      {
+        breakpoints: fromJS({
+          pendingBreakpoints: I.List([
+            makePendingBreakpoint({
+              location: { sourceUrl: "base.js", line: 5, column: undefined },
+              condition: null,
+              disabled: false
+            })
+          ])
+        })
+      }
+    );
+    //
+    // await dispatch(
+    //   actions.addBreakpoint({
+    //     sourceId: "base.js",
+    //     line: 5
+    //   })
+    // );
+    //
+    // dispatch(actions.newSource(makeSource("base.js")));
+    // expect(getSources(getState()).size).to.equal(1);
+    // expect(selectors.getBreakpoints(getState()).size).to.be(1);
+    console.log("state", getState().breakpoints.toJS());
+    expect(selectors.getPendingBreakpoints(getState()).size).to.be(1);
 
-    expect(getSources(getState()).size).to.equal(1);
-    const base = getSource(getState(), "base.js");
-    expect(base.get("id")).to.equal("base.js");
+    // const base = getSource(getState(), "base.js");
+    // expect(base.get("id")).to.equal("base.js");
   });
 
   it("should select a source", () => {

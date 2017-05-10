@@ -20,7 +20,7 @@ import type { Record } from "../utils/makeRecord";
 
 export type BreakpointsState = {
   breakpoints: I.Map<string, Breakpoint>,
-  pendingBreakpoints: ?I.Map<string, any>,
+  pendingBreakpoints: any,
   breakpointsDisabled: false
 };
 
@@ -64,9 +64,7 @@ function update(state: Record<BreakpointsState> = State(), action: Action) {
   switch (action.type) {
     case "ADD_BREAKPOINT": {
       const newState = addBreakpoint(state, action);
-      if (newState) {
-        setPendingBreakpoints(newState);
-      }
+      setPendingBreakpoints(newState);
       return newState;
     }
 
@@ -87,31 +85,9 @@ function update(state: Record<BreakpointsState> = State(), action: Action) {
     }
 
     case "SET_BREAKPOINT_CONDITION": {
-      const id = makeLocationId(action.breakpoint.location);
-
-      if (action.status === "start") {
-        const bp = state.breakpoints.get(id);
-        return state.setIn(
-          ["breakpoints", id],
-          updateObj(bp, {
-            loading: true,
-            condition: action.condition
-          })
-        );
-      } else if (action.status === "done") {
-        const bp = state.breakpoints.get(id);
-        return state.setIn(
-          ["breakpoints", id],
-          updateObj(bp, {
-            id: action.value.id,
-            loading: false
-          })
-        );
-      } else if (action.status === "error") {
-        return state.deleteIn(["breakpoints", id]);
-      }
-
-      break;
+      const newState = setCondition(state, action);
+      setPendingBreakpoints(newState);
+      return newState;
     }
   }
 
@@ -124,7 +100,7 @@ function addBreakpoint(state, action) {
   if (action.status === "start") {
     let bp = state.breakpoints.get(id) || action.breakpoint;
 
-    return state
+    const updatedState = state
       .setIn(
         ["breakpoints", id],
         updateObj(bp, {
@@ -137,6 +113,8 @@ function addBreakpoint(state, action) {
         })
       )
       .set("breakpointsDisabled", false);
+
+    return updatedState;
   }
 
   if (action.status === "done") {
@@ -158,7 +136,7 @@ function addBreakpoint(state, action) {
 
     const locationId = makeLocationId(location);
     const bp = state.breakpoints.get(locationId);
-    return state.setIn(
+    const updatedState = state.setIn(
       ["breakpoints", locationId],
       updateObj(bp, {
         id: breakpointId,
@@ -166,6 +144,11 @@ function addBreakpoint(state, action) {
         loading: false,
         text: text
       })
+    );
+
+    return updatedState.set(
+      "pendingBreakpoints",
+      _getPendingBreakpoints(updatedState)
     );
   }
 
@@ -176,37 +159,73 @@ function addBreakpoint(state, action) {
 }
 
 function removeBreakpoint(state, action) {
-  if (action.status === "done") {
-    const id = makeLocationId(action.breakpoint.location);
+  if (action.status != "done") {
+    return state;
+  }
 
-    if (action.disabled) {
-      const bp = state.breakpoints.get(id);
-      const updatedState = state.setIn(
-        ["breakpoints", id],
-        updateObj(bp, {
-          loading: false,
-          disabled: true
-        })
-      );
+  const id = makeLocationId(action.breakpoint.location);
+  let updatedState = undefined;
 
-      return updatedState.set(
-        "breakpointsDisabled",
-        allBreakpointsDisabled(updatedState)
-      );
-    }
+  if (action.disabled) {
+    const bp = state.breakpoints.get(id);
+    updatedState = state.setIn(
+      ["breakpoints", id],
+      updateObj(bp, {
+        loading: false,
+        disabled: true
+      })
+    );
+  } else {
+    updatedState = state.deleteIn(["breakpoints", id]);
+  }
 
-    const updatedState = state.deleteIn(["breakpoints", id]);
+  updatedState = updatedState.set(
+    "pendingBreakpoints",
+    _getPendingBreakpoints(updatedState)
+  );
 
-    return updatedState.set(
-      "breakpointsDisabled",
-      allBreakpointsDisabled(updatedState)
+  return updatedState.set(
+    "breakpointsDisabled",
+    allBreakpointsDisabled(updatedState)
+  );
+}
+
+function setCondition(state, action) {
+  const id = makeLocationId(action.breakpoint.location);
+
+  if (action.status === "start") {
+    const bp = state.breakpoints.get(id);
+    return state.setIn(
+      ["breakpoints", id],
+      updateObj(bp, {
+        loading: true,
+        condition: action.condition
+      })
     );
   }
 
-  return state;
+  if (action.status === "done") {
+    const bp = state.breakpoints.get(id);
+    let updatedState = state.setIn(
+      ["breakpoints", id],
+      updateObj(bp, {
+        id: action.value.id,
+        loading: false
+      })
+    );
+
+    return updatedState.set(
+      "pendingBreakpoints",
+      _getPendingBreakpoints(updatedState)
+    );
+  }
+
+  if (action.status === "error") {
+    return state.deleteIn(["breakpoints", id]);
+  }
 }
 
-function makePendingBreakpoint(bp: any) {
+export function makePendingBreakpoint(bp: any) {
   const { location: { sourceUrl, line, column }, condition, disabled } = bp;
 
   const location = { sourceUrl, line, column };
@@ -218,7 +237,11 @@ function filterByNotLoading(bp: any): boolean {
 }
 
 function setPendingBreakpoints(state) {
-  prefs.pendingBreakpoints = Object.values(state.get("breakpoints").toJS())
+  prefs.pendingBreakpoints = _getPendingBreakpoints(state);
+}
+
+function _getPendingBreakpoints(state) {
+  return Object.values(state.get("breakpoints").toJS())
     .filter(filterByNotLoading)
     .map(makePendingBreakpoint);
 }

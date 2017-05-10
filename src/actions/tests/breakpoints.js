@@ -1,4 +1,5 @@
 import { createStore, selectors, actions } from "../../utils/test-head";
+import { makeLocationId } from "../../reducers/breakpoints";
 import expect from "expect.js";
 
 const simpleMockThreadClient = {
@@ -21,14 +22,32 @@ const simpleMockThreadClient = {
   }
 };
 
+function generateBreakpoint(filename) {
+  return {
+    location: {
+      sourceUrl: `http://todomvc.com/${filename}`,
+      sourceId: filename,
+      line: 5
+    }
+  };
+}
+
+function generatePendingBreakpoint(breakpoint) {
+  return {
+    sourceUrl: breakpoint.location.sourceUrl,
+    line: breakpoint.location.line,
+    column: undefined
+  };
+}
+
 describe("breakpoints", () => {
-  it("should add a breakpoint", async () => {
+  it("pending breakpoints should be empty", async () => {
     const { dispatch, getState } = createStore(simpleMockThreadClient);
 
-    await dispatch(actions.addBreakpoint({ sourceId: "a", line: 5 }));
-    await dispatch(actions.addBreakpoint({ sourceId: "b", line: 6 }));
-
-    expect(selectors.getBreakpoints(getState()).size).to.be(2);
+    // await dispatch(actions.addBreakpoint({ sourceId: "a", line: 5 }));
+    // await dispatch(actions.addBreakpoint({ sourceId: "b", line: 6 }));
+    //
+    expect(selectors.getPendingBreakpoints(getState()).length).to.be(0);
   });
 
   it("should remove a breakpoint", async () => {
@@ -112,5 +131,76 @@ describe("breakpoints", () => {
     expect(selectors.getBreakpoint(getState(), loc).condition).to.be(
       "const foo = 0"
     );
+  });
+});
+
+describe("pending breakpoints", () => {
+  it("when the user adds a breakpoint, a corresponding pending breakpoint should be added", async () => {
+    const { dispatch, getState } = createStore(simpleMockThreadClient);
+    const bp = generateBreakpoint("foo");
+
+    await dispatch(actions.addBreakpoint(bp.location));
+    const pendingBps = selectors.getPendingBreakpoints(getState());
+    expect(pendingBps.length).to.be(1);
+    expect(pendingBps[0].location).to.eql(generatePendingBreakpoint(bp));
+  });
+
+  it("when the user adds a second breakpoint, a corresponding pending breakpoint should be added", async () => {
+    const { dispatch, getState } = createStore(simpleMockThreadClient);
+    const foo = generateBreakpoint("foo");
+    const foo2 = generateBreakpoint("foo2");
+
+    await dispatch(actions.addBreakpoint(foo.location));
+    await dispatch(actions.addBreakpoint(foo2.location));
+
+    const pendingBps = selectors.getPendingBreakpoints(getState());
+    expect(pendingBps.length).to.be(2);
+    expect(pendingBps[0].location).to.eql(generatePendingBreakpoint(foo));
+    expect(pendingBps[1].location).to.eql(generatePendingBreakpoint(foo2));
+  });
+
+  it("when the user removes a breakpoint, the corresponding pending breakpoint is also removed", async () => {
+    const { dispatch, getState } = createStore(simpleMockThreadClient);
+    const bp = generateBreakpoint("foo");
+
+    await dispatch(actions.addBreakpoint(bp.location));
+    await dispatch(actions.removeBreakpoint(bp.location));
+    const pendingBps = selectors.getPendingBreakpoints(getState());
+    expect(pendingBps.length).to.be(0);
+  });
+
+  it("when the user disables a breakpoint, the corresponding pending breakpoint is also disabled", async () => {
+    const { dispatch, getState } = createStore(simpleMockThreadClient);
+    const bp = generateBreakpoint("foo");
+
+    await dispatch(actions.addBreakpoint(bp.location));
+    await dispatch(actions.disableBreakpoint(bp.location));
+    const bps = selectors.getPendingBreakpoints(getState());
+    const breakpoint = bps[0];
+    expect(breakpoint.disabled).to.be(true);
+  });
+
+  it("when the user updates a breakpoint, the corresponding pending breakpoints are not removed", async () => {
+    const { dispatch, getState } = createStore(simpleMockThreadClient);
+    const bp = generateBreakpoint("foo");
+
+    await dispatch(actions.addBreakpoint(bp.location));
+    await dispatch(
+      actions.setBreakpointCondition(bp.location, { condition: "2" })
+    );
+    const bps = selectors.getPendingBreakpoints(getState());
+    const breakpoint = bps[0];
+    expect(breakpoint.condition).to.be("2");
+  });
+
+  it("when the user navigates, the pending breakpoints are not removed", async () => {
+    const { dispatch, getState } = createStore(simpleMockThreadClient);
+    const bp = generateBreakpoint("foo");
+
+    await dispatch(actions.addBreakpoint(bp.location));
+
+    const bps = selectors.getPendingBreakpoints(getState());
+    const breakpoint = bps[0];
+    expect(breakpoint.condition).to.be("2");
   });
 });
