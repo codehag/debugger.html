@@ -55,7 +55,7 @@ describe("sources", () => {
   });
 
   it.only("should add a pending breakpoint ", async () => {
-    const { dispatch, getState } = createStore(
+    const { getState } = createStore(
       {
         setBreakpoint: (location, condition) => {
           return new Promise((resolve, reject) => {
