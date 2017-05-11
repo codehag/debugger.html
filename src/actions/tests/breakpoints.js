@@ -1,24 +1,31 @@
-// jest.mock("../../utils/prefs");
-// let stuff = {};
-// jest.genMockFromModule("../../utils/prefs");
-// const foo = jest.fn();
+// TODO: we would like to mock this in the local tests
+const theMockedPendingBreakpoint = {
+  location: {
+    sourceUrl: "http://todomvc.com/bar.js",
+    line: 5,
+    column: undefined
+  },
+  condition: "3",
+  disabled: false
+};
+
 jest.mock("../../utils/prefs", () => ({
   prefs: {
     expressions: [],
-    pendingBreakpoints: []
+    pendingBreakpoints: [
+      {
+        location: {
+          sourceUrl: "http://todomvc.com/bar.js",
+          line: 5,
+          column: undefined
+        },
+        condition: "3",
+        disabled: false
+      }
+    ]
   }
 }));
 
-// , () => ({
-//   prefs: {}
-// }));
-
-// console.log(bar);
-
-// foo.mockImplementation(() => ({
-//   pendingBreakpoints: []
-// }));
-//
 import { createStore, selectors, actions } from "../../utils/test-head";
 import { makeLocationId } from "../../reducers/breakpoints";
 import expect from "expect.js";
@@ -156,14 +163,15 @@ describe("breakpoints", () => {
 });
 
 describe("pending breakpoints", () => {
+  beforeEach(() => {});
   it("when the user adds a breakpoint, a corresponding pending breakpoint should be added", async () => {
     const { dispatch, getState } = createStore(simpleMockThreadClient);
     const bp = generateBreakpoint("foo");
 
     await dispatch(actions.addBreakpoint(bp.location));
     const pendingBps = selectors.getPendingBreakpoints(getState());
-    expect(pendingBps.length).to.be(1);
-    expect(pendingBps[0].location).to.eql(generatePendingBreakpoint(bp));
+    expect(pendingBps.length).to.be(2);
+    expect(pendingBps[1].location).to.eql(generatePendingBreakpoint(bp));
   });
 
   it("when the user adds a second breakpoint, a corresponding pending breakpoint should be added", async () => {
@@ -173,11 +181,11 @@ describe("pending breakpoints", () => {
 
     await dispatch(actions.addBreakpoint(foo.location));
     await dispatch(actions.addBreakpoint(foo2.location));
-
+    // console.log(selectors.getPendingBreakpoints(getState()));
     const pendingBps = selectors.getPendingBreakpoints(getState());
-    expect(pendingBps.length).to.be(2);
-    expect(pendingBps[0].location).to.eql(generatePendingBreakpoint(foo));
-    expect(pendingBps[1].location).to.eql(generatePendingBreakpoint(foo2));
+    expect(pendingBps.length).to.be(3);
+    expect(pendingBps[1].location).to.eql(generatePendingBreakpoint(foo));
+    expect(pendingBps[2].location).to.eql(generatePendingBreakpoint(foo2));
   });
 
   it("when the user removes a breakpoint, the corresponding pending breakpoint is also removed", async () => {
@@ -214,22 +222,36 @@ describe("pending breakpoints", () => {
     expect(breakpoint.condition).to.be("2");
   });
 
-  it.only("when the debugger opens, it adds pending breakpoints", async () => {
-    console.log("STARTING TEST");
-    jest.setMock("../../utils/prefs", () => ({
-      prefs: { pendingBreakpoints: [{ foo: 2 }], expressions: [] }
-    }));
-
-    // prefs.pendingBreakpoints = [{ foo: 2 }];
-
+  it("when the debugger opens, it adds pending breakpoints", async () => {
     const { dispatch, getState } = createStore(simpleMockThreadClient);
-    // const bp = generateBreakpoint("foo");
-
-    // initializeStore()
-    // await dispatch(actions.addBreakpoint(bp.location));
     const bps = selectors.getPendingBreakpoints(getState());
-    const breakpoint = bps[0];
-    console.log(bps);
-    // expect(breakpoint.condition).to.be("2");
+    const bp = bps[0];
+    expect(bp).to.eql(theMockedPendingBreakpoint);
   });
+
+  xit(
+    "when a bp is added, where there is a corresponding pending breakpoint we update it",
+    async () => {
+      const { dispatch, getState } = createStore(simpleMockThreadClient);
+      const bp = generateBreakpoint("bar");
+
+      await dispatch(actions.addBreakpoint(bp.location));
+
+      const bps = selectors.getPendingBreakpoints(getState());
+      expect(bps.length).to.be(1);
+    }
+  );
+
+  xit(
+    "when a bp is added, it does not remove the other pending breakpoints",
+    async () => {
+      const { dispatch, getState } = createStore(simpleMockThreadClient);
+      const bp = generateBreakpoint("foo");
+
+      await dispatch(actions.addBreakpoint(bp.location));
+
+      const bps = selectors.getPendingBreakpoints(getState());
+      expect(bps.length).to.be(2);
+    }
+  );
 });

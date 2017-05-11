@@ -36,7 +36,6 @@ export type Record<T: Object> = {
  * @static
  */
 function makeRecord<T>(spec: T & Object): (init: $Shape<T>) => Record<T> {
-  console.log(spec);
   return I.Record(spec);
 }
 

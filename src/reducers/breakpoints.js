@@ -24,16 +24,13 @@ export type BreakpointsState = {
   breakpointsDisabled: false
 };
 
-export const State = () => {
-  console.log("initializing!!!");
-  return makeRecord(
-    ({
-      breakpoints: I.Map(),
-      pendingBreakpoints: restorePendingBreakpoints(),
-      breakpointsDisabled: false
-    }: BreakpointsState)
-  );
-};
+export const State = makeRecord(
+  ({
+    breakpoints: I.Map(),
+    pendingBreakpoints: restorePendingBreakpoints(),
+    breakpointsDisabled: false
+  }: BreakpointsState)
+);
 
 // Return the first argument that is a string, or null if nothing is a
 // string.
@@ -64,8 +61,6 @@ function allBreakpointsDisabled(state) {
 }
 
 function update(state: Record<BreakpointsState> = State(), action: Action) {
-  console.log(action, state);
-
   switch (action.type) {
     case "ADD_BREAKPOINT": {
       const newState = addBreakpoint(state, action);
@@ -153,7 +148,7 @@ function addBreakpoint(state, action) {
 
     return updatedState.set(
       "pendingBreakpoints",
-      _getPendingBreakpoints(updatedState)
+      createOrUpdatePendingBreakpoint(updatedState, bp)
     );
   }
 
@@ -251,8 +246,21 @@ function _getPendingBreakpoints(state) {
     .map(makePendingBreakpoint);
 }
 
+function createOrUpdatePendingBreakpoint(state, breakpoint) {
+  // if (state.pendingBreakpoints.has(id)) {
+  //   return state.pendingBreakpoints.set(id, makePendingBreakpoint(breakpoint));
+  // }
+  // return state.pendingBreakpoints.setIn(
+  //   ["pendingBreakpoints", id],
+  //   makePendingBreakpoint(breakpoint)
+  // );
+
+  return state.pendingBreakpoints.concat([makePendingBreakpoint(breakpoint)]);
+}
+
+function deletePendingBreakpoint(state, breakpoint) {}
+
 function restorePendingBreakpoints() {
-  console.log("prefs", prefs, prefs.pendingBreakpoints);
   return prefs.pendingBreakpoints;
 }
 
