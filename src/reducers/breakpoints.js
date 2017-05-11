@@ -56,6 +56,12 @@ export function makeLocationId(location: Location) {
   return `${sourceId}:${line}:${column}`;
 }
 
+export function makePendingLocationId(location: Location) {
+  let { sourceUrl, line, column } = location;
+  column = column || "";
+  return `${sourceUrl}:${line}:${column}`;
+}
+
 function allBreakpointsDisabled(state) {
   return state.breakpoints.every(x => x.disabled);
 }
@@ -146,10 +152,7 @@ function addBreakpoint(state, action) {
       })
     );
 
-    return updatedState.set(
-      "pendingBreakpoints",
-      createOrUpdatePendingBreakpoint(updatedState, bp)
-    );
+    return updatePendingBreakpoint(updatedState, bp);
   }
 
   if (action.status === "error") {
@@ -164,25 +167,22 @@ function removeBreakpoint(state, action) {
   }
 
   const id = makeLocationId(action.breakpoint.location);
+  const pendingId = makePendingLocationId(action.breakpoint.location);
   let updatedState = undefined;
 
   if (action.disabled) {
     const bp = state.breakpoints.get(id);
-    updatedState = state.setIn(
-      ["breakpoints", id],
-      updateObj(bp, {
-        loading: false,
-        disabled: true
-      })
-    );
+    const breakpoint = updateObj(bp, {
+      loading: false,
+      disabled: true
+    });
+    updatedState = state.setIn(["breakpoints", id], breakpoint);
+    updatedState = updatePendingBreakpoint(updatedState, breakpoint);
   } else {
-    updatedState = state.deleteIn(["breakpoints", id]);
+    updatedState = state
+      .deleteIn(["breakpoints", id])
+      .deleteIn(["pendingBreakpoints", pendingId]);
   }
-
-  updatedState = updatedState.set(
-    "pendingBreakpoints",
-    _getPendingBreakpoints(updatedState)
-  );
 
   return updatedState.set(
     "breakpointsDisabled",
@@ -206,18 +206,14 @@ function setCondition(state, action) {
 
   if (action.status === "done") {
     const bp = state.breakpoints.get(id);
-    let updatedState = state.setIn(
-      ["breakpoints", id],
-      updateObj(bp, {
-        id: action.value.id,
-        loading: false
-      })
-    );
+    const updatedBreakpoint = updateObj(bp, {
+      id: action.value.id,
+      loading: false
+    });
 
-    return updatedState.set(
-      "pendingBreakpoints",
-      _getPendingBreakpoints(updatedState)
-    );
+    let updatedState = state.setIn(["breakpoints", id], updatedBreakpoint);
+
+    return updatePendingBreakpoint(updatedState, updatedBreakpoint);
   }
 
   if (action.status === "error") {
@@ -232,36 +228,20 @@ export function makePendingBreakpoint(bp: any) {
   return { condition, disabled, location };
 }
 
-function filterByNotLoading(bp: any): boolean {
-  return !bp.loading;
-}
-
 function setPendingBreakpoints(state) {
-  prefs.pendingBreakpoints = _getPendingBreakpoints(state);
+  prefs.pendingBreakpoints = state.pendingBreakpoints;
 }
 
-function _getPendingBreakpoints(state) {
-  return Object.values(state.get("breakpoints").toJS())
-    .filter(filterByNotLoading)
-    .map(makePendingBreakpoint);
+function updatePendingBreakpoint(state, breakpoint) {
+  const id = makePendingLocationId(breakpoint.location);
+  return state.setIn(
+    ["pendingBreakpoints", id],
+    makePendingBreakpoint(breakpoint)
+  );
 }
-
-function createOrUpdatePendingBreakpoint(state, breakpoint) {
-  // if (state.pendingBreakpoints.has(id)) {
-  //   return state.pendingBreakpoints.set(id, makePendingBreakpoint(breakpoint));
-  // }
-  // return state.pendingBreakpoints.setIn(
-  //   ["pendingBreakpoints", id],
-  //   makePendingBreakpoint(breakpoint)
-  // );
-
-  return state.pendingBreakpoints.concat([makePendingBreakpoint(breakpoint)]);
-}
-
-function deletePendingBreakpoint(state, breakpoint) {}
 
 function restorePendingBreakpoints() {
-  return prefs.pendingBreakpoints;
+  return I.Map(prefs.pendingBreakpoints);
 }
 
 // Selectors
