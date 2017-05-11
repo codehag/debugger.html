@@ -1,3 +1,24 @@
+// jest.mock("../../utils/prefs");
+// let stuff = {};
+// jest.genMockFromModule("../../utils/prefs");
+// const foo = jest.fn();
+jest.mock("../../utils/prefs", () => ({
+  prefs: {
+    expressions: [],
+    pendingBreakpoints: []
+  }
+}));
+
+// , () => ({
+//   prefs: {}
+// }));
+
+// console.log(bar);
+
+// foo.mockImplementation(() => ({
+//   pendingBreakpoints: []
+// }));
+//
 import { createStore, selectors, actions } from "../../utils/test-head";
 import { makeLocationId } from "../../reducers/breakpoints";
 import expect from "expect.js";
@@ -193,14 +214,22 @@ describe("pending breakpoints", () => {
     expect(breakpoint.condition).to.be("2");
   });
 
-  it("when the user navigates, the pending breakpoints are not removed", async () => {
+  it.only("when the debugger opens, it adds pending breakpoints", async () => {
+    console.log("STARTING TEST");
+    jest.setMock("../../utils/prefs", () => ({
+      prefs: { pendingBreakpoints: [{ foo: 2 }], expressions: [] }
+    }));
+
+    // prefs.pendingBreakpoints = [{ foo: 2 }];
+
     const { dispatch, getState } = createStore(simpleMockThreadClient);
-    const bp = generateBreakpoint("foo");
+    // const bp = generateBreakpoint("foo");
 
-    await dispatch(actions.addBreakpoint(bp.location));
-
+    // initializeStore()
+    // await dispatch(actions.addBreakpoint(bp.location));
     const bps = selectors.getPendingBreakpoints(getState());
     const breakpoint = bps[0];
-    expect(breakpoint.condition).to.be("2");
+    console.log(bps);
+    // expect(breakpoint.condition).to.be("2");
   });
 });

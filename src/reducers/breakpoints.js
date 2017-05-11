@@ -24,13 +24,16 @@ export type BreakpointsState = {
   breakpointsDisabled: false
 };
 
-export const State = makeRecord(
-  ({
-    breakpoints: I.Map(),
-    pendingBreakpoints: restorePendingBreakpoints(),
-    breakpointsDisabled: false
-  }: BreakpointsState)
-);
+export const State = () => {
+  console.log("initializing!!!");
+  return makeRecord(
+    ({
+      breakpoints: I.Map(),
+      pendingBreakpoints: restorePendingBreakpoints(),
+      breakpointsDisabled: false
+    }: BreakpointsState)
+  );
+};
 
 // Return the first argument that is a string, or null if nothing is a
 // string.
@@ -61,6 +64,8 @@ function allBreakpointsDisabled(state) {
 }
 
 function update(state: Record<BreakpointsState> = State(), action: Action) {
+  console.log(action, state);
+
   switch (action.type) {
     case "ADD_BREAKPOINT": {
       const newState = addBreakpoint(state, action);
@@ -247,6 +252,7 @@ function _getPendingBreakpoints(state) {
 }
 
 function restorePendingBreakpoints() {
+  console.log("prefs", prefs, prefs.pendingBreakpoints);
   return prefs.pendingBreakpoints;
 }
 
