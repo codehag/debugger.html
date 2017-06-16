@@ -162,6 +162,38 @@ function isDirectory(url: Object) {
   );
 }
 
+function findPartialMatch(string, keys) {
+  // what is happening here is basically a sorting algorythim
+  const [_, root] = string.match(/.[^\/.+]*/);
+
+  const rootRegex = new RegExp(root);
+  const partialMatches = keys.filter(str => rootRegex.test(str));
+
+  // three cases: no matches, root match, full string match, and recursion
+  // if there are no matches, exit
+  if (partialMatches.length === 0) {
+    return null;
+  }
+
+  // - root exists? if we have only one root and it is the directory return
+  // if there is only one partial match, the node exists, and we can go to it
+  if (parthalMatches.length === 1 && partialMatches[0] === root) {
+    return root;
+  }
+
+  // check if there is a partial string for the full path
+  const stringRegex = new RegExp(string);
+  const newPartialMatches = partialMatches.filter(str => stringRegex.test(str));
+
+  // we are at a root path
+  if (newPartialMatches.length > 1) {
+    return { partialMatches: newPartialMatches, path: string, isPartial: true };
+  }
+
+  // recursive search
+  return { path: partialMatch[0] };
+}
+
 function traverseTreeBackwards(urlString, pathMap = {}, contents, filename) {
   if (!urlString) {
     // early exist out of recursive loop
@@ -173,6 +205,7 @@ function traverseTreeBackwards(urlString, pathMap = {}, contents, filename) {
   const node = { path: fullString, name: filename || name, contents };
   const treeNode = { [node.name]: node };
   const fullPath = pathMap[fullString];
+
   if (fullPath) {
     fullPath.contents = {
       ...fullPath.contents,
@@ -180,7 +213,6 @@ function traverseTreeBackwards(urlString, pathMap = {}, contents, filename) {
     };
     return pathMap;
   }
-
   pathMap[fullString] = node;
 
   // append to existing path
@@ -191,8 +223,14 @@ function traverseTreeBackwards(urlString, pathMap = {}, contents, filename) {
     return pathMap;
   }
 
-  // recursively build path if not existing
-  return traverseTreeBackwards(path, pathMap, treeNode);
+  const partialMatch = findPartialMatch(path, Object.keys(pathMap));
+
+  if (partialMatch) {
+    // recursively build path if
+    return traverseTreeBackwards(path, pathMap, treeNode);
+  }
+
+  return pathMap;
 }
 
 function buildSourceTree(sources) {
@@ -206,7 +244,6 @@ function buildSourceTree(sources) {
       !url.group ||
       isPretty(source.toJS())
     ) {
-      console.log("noop");
     } else {
       const path = url.group ? `${url.group}${url.path}` : url.path;
       pathMap = traverseTreeBackwards(path, pathMap, source, url.filename);
