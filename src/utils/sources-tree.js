@@ -162,6 +162,113 @@ function isDirectory(url: Object) {
   );
 }
 
+function splitUrl(address) {
+  const matches = address.match(/\/?([^\/]*)(.*)/);
+  // if current is empty, we are in a directory
+  const current = matches[1] || "(index)";
+  const next = matches[2];
+  return { current, next };
+}
+
+function traverseTree(tree = {}, address, oldPath = "") {
+  const { current, next } = splitUrl(address);
+  const nextPath = `${oldPath}/${current}`;
+
+  if (!tree[current]) {
+    tree[current] = {
+      contents: {},
+      path: nextPath,
+      name: current
+    };
+  }
+
+  if (!next) {
+    return tree[current];
+  }
+  return traverseTree(tree[current].contents, next, nextPath);
+}
+
+function addSourceToTree(tree: any, source: TmpSource) {
+  const url = getURL(source.get("url"));
+
+  if (
+    IGNORED_URLS.indexOf(url) !== -1 ||
+    !source.get("url") ||
+    !url.group ||
+    isPretty(source.toJS())
+  ) {
+    return tree;
+  }
+
+  const urlString = `${url.group}${decodeURIComponent(url.path)}`;
+  const treeNode = traverseTree(tree, urlString);
+
+  treeNode.name = url.filename;
+  treeNode.path = urlString;
+  treeNode.contents = source;
+  treeNode.type = "file";
+  return tree;
+}
+
+function collapseNode(tree, basetree, isGroup) {
+  if (basetree.type === "file") {
+    return basetree;
+  }
+
+  const name = tree.name ? tree.name : basetree.name;
+  tree.name = name;
+  tree.path = basetree.path;
+
+  const childrenKeys = Object.keys(basetree.contents);
+  if (childrenKeys.length === 1 && !isGroup) {
+    const child = basetree.contents[childrenKeys[0]];
+    if (child.type === "file") {
+      tree.contents = [child];
+      return tree;
+    }
+    tree.contents = { ...child.contents };
+    tree.name = `${name}/${child.name}`;
+    tree.path = child.path;
+    return collapseNode(tree, child);
+  }
+
+  tree.contents = [];
+  for (let child of childrenKeys) {
+    tree.contents.push(collapseNode({}, basetree.contents[child]));
+  }
+
+  tree.contents.sort((prev, curr) => {
+    if (curr.type === prev.type) {
+      return curr.name < prev.name ? 1 : -1;
+    }
+    if (curr.type === "file") {
+      return -1;
+    }
+    return 1;
+  });
+
+  return tree;
+}
+
+function collapseSourceTree(sourcetree) {
+  const tree = { ...sourcetree };
+  tree.contents = [];
+  for (let child of Object.keys(sourcetree.contents)) {
+    tree.contents.push(collapseNode({}, sourcetree.contents[child], true));
+  }
+  return tree;
+}
+
+function buildSourceTree(sources) {
+  let tree = {
+    contents: {}
+  };
+  for (let source of sources.valueSeq()) {
+    tree.contents = addSourceToTree(tree.contents, source);
+  }
+  return tree;
+}
+
 /**
  * @memberof utils/sources-tree
  * @static
@@ -333,10 +440,23 @@ function collapseTree(node: any, depth: number = 0) {
  */
 function createTree(sources: any, debuggeeUrl: string) {
   const uncollapsedTree = createNode("root", "", []);
+  // const uncollapsedTree = populateTree(baseTree, sources, debuggeeUrl);
+  const addToTreeStart = performance.now();
   for (let source of sources.valueSeq()) {
     addToTree(uncollapsedTree, source, debuggeeUrl);
   }
-  const sourceTree = collapseTree(uncollapsedTree);
+  const sourceTree2 = collapseTree(uncollapsedTree);
+  const addToTreeEnd = performance.now();
+  const pathMapStart = performance.now();
+  const pathMap = buildSourceTree(sources);
+  const sourceTree = collapseSourceTree(pathMap);
+  const pathMapEnd = performance.now();
+
+  console.log("uncollapsedTree", uncollapsedTree);
+  console.log("sourceTree", sourceTree2);
+  console.log("pathMap", pathMap, sourceTree);
+  console.log("addToTree", addToTreeEnd - addToTreeStart);
+  console.log("pathMap", pathMapEnd - pathMapStart);
 
   return {
     uncollapsedTree,
