@@ -45,11 +45,15 @@ const Preview = createFactory(_Preview);
 
 import _Breakpoints from "./Breakpoints";
 const Breakpoints = createFactory(_Breakpoints);
+
 import _HitMarker from "./HitMarker";
 const HitMarker = createFactory(_HitMarker);
 
 import _CallSites from "./CallSites";
 const CallSites = createFactory(_CallSites);
+
+import _DebugLine from "./DebugLine";
+const DebugLine = createFactory(_DebugLine);
 
 import {
   showSourceText,
@@ -61,11 +65,8 @@ import {
   resizeBreakpointGutter,
   traverseResults,
   updateSelection,
-  markText,
   lineAtHeight,
   toSourceLine,
-  toEditorLine,
-  toEditorPosition,
   toEditorRange,
   resetLineNumberFormat
 } from "../../utils/editor";
@@ -82,7 +83,6 @@ const cssVars = {
   footerHeight: "var(--editor-footer-height)"
 };
 
-let debugExpression;
 class Editor extends PureComponent {
   cbPanel: any;
   editor: SourceEditor;
@@ -117,6 +117,7 @@ class Editor extends PureComponent {
   componentWillReceiveProps(nextProps) {
     // This lifecycle method is responsible for updating the editor
     // text.
+
     const { selectedSource, selectedLocation } = nextProps;
 
     if (
@@ -146,8 +147,6 @@ class Editor extends PureComponent {
         clearLineClass(this.state.editor.codeMirror, "in-scope");
       });
 
-      this.clearDebugLine(this.props.selectedFrame);
-      this.setDebugLine(nextProps.selectedFrame, selectedLocation);
       resizeBreakpointGutter(this.state.editor.codeMirror);
     }
   }
@@ -479,36 +478,67 @@ class Editor extends PureComponent {
     return !!this.cbPanel;
   }
 
-  clearDebugLine(selectedFrame) {
-    if (this.state.editor && selectedFrame) {
-      const { sourceId, line } = selectedFrame.location;
-      if (debugExpression) {
-        debugExpression.clear();
-      }
+  toggleBreakpoint(line, column = undefined) {
+    const {
+      selectedSource,
+      selectedLocation,
+      breakpoints,
+      addBreakpoint,
+      removeBreakpoint
+    } = this.props;
+    const bp = breakpointAtLocation(breakpoints, { line, column });
 
-      let editorLine = toEditorLine(sourceId, line);
-      this.state.editor.codeMirror.removeLineClass(
-        editorLine,
-        "line",
-        "new-debug-line"
+    if ((bp && bp.loading) || !selectedLocation || !selectedSource) {
+      return;
+    }
+
+    const { sourceId } = selectedLocation;
+
+    if (bp) {
+      removeBreakpoint({
+        sourceId: sourceId,
+        line: line + 1,
+        column: column
+      });
+    } else {
+      addBreakpoint(
+        {
+          sourceId: sourceId,
+          sourceUrl: selectedSource.get("url"),
+          line: line + 1,
+          column: column
+        },
+        // Pass in a function to get line text because the breakpoint
+        // may slide and it needs to compute the value at the new
+        // line.
+        { getTextForLine: l => getTextForLine(this.editor.codeMirror, l) }
       );
     }
   }
 
-  setDebugLine(selectedFrame, selectedLocation) {
-    if (
-      this.state.editor &&
-      selectedFrame &&
-      selectedLocation &&
-      selectedFrame.location.sourceId === selectedLocation.sourceId
-    ) {
-      const { location, sourceId } = selectedFrame;
-      const { line, column } = toEditorPosition(sourceId, location);
+  toggleBreakpointDisabledStatus(line) {
+    const bp = breakpointAtLocation(this.props.breakpoints, { line });
+    const { selectedLocation } = this.props;
 
-      this.state.editor.codeMirror.addLineClass(line, "line", "new-debug-line");
-      debugExpression = markText(this.state.editor, "debug-expression", {
-        start: { line, column },
-        end: { line, column: null }
+    if ((bp && bp.loading) || !selectedLocation) {
+      return;
+    }
+
+    const { sourceId } = selectedLocation;
+
+    if (!bp) {
+      throw new Error("attempt to disable breakpoint that does not exist");
+    }
+
+    if (!bp.disabled) {
+      this.props.disableBreakpoint({
+        sourceId: sourceId,
+        line: line + 1
+      });
+    } else {
+      this.props.enableBreakpoint({
+        sourceId: sourceId,
+        line: line + 1
       });
     }
   }
@@ -633,6 +663,17 @@ class Editor extends PureComponent {
     );
   }
 
+  renderDebugLine() {
+    const { selectedFrame, selectedSource } = this.props;
+
+    if (selectedSource && !selectedSource.get("loading") && selectedFrame) {
+      return DebugLine({
+        sourceId: selectedSource.get("id"),
+        line: this.props.selectedFrame.location.line
+      });
+    }
+  }
+
   renderPreview() {
     const { selectedSource, selection } = this.props;
     if (!this.state.editor || !selectedSource) {
@@ -744,6 +785,7 @@ class Editor extends PureComponent {
       this.renderHighlightLines(),
       this.renderInScopeLines(),
       this.renderHitCounts(),
+      this.renderDebugLine(),
       this.renderFooter(),
       this.renderPreview(),
       this.renderCallSites(),
