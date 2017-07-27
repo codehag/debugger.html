@@ -1,42 +1,64 @@
 // @flow
 import { PureComponent } from "react";
-import { getDocument } from "../../utils/editor";
+import { getDocument, toEditorPosition, markText } from "../../utils/editor";
 
 type DebugLineProps = {
   sourceId: string,
-  line: number
+  editor: any,
+  selectedFrame: any,
+  selectedLocation: any
 };
 
+let debugExpression;
 class DebugLine extends PureComponent {
   props: DebugLineProps;
 
   componentDidUpdate(prevProps: DebugLineProps) {
-    this.clearDebugLine(prevProps.line);
-    this.setDebugLine(this.props.line);
+    this.clearDebugLine(prevProps.selectedFrame);
+    this.setDebugLine(this.props.selectedFrame, this.props.selectedLocation);
   }
 
   componentDidMount() {
-    this.setDebugLine(this.props.line);
+    this.setDebugLine(this.props.selectedFrame, this.props.selectedLocation);
   }
 
   componentWillUnmount() {
-    this.clearDebugLine(this.props.line);
+    this.clearDebugLine(this.props.selectedFrame);
   }
 
-  clearDebugLine(line: number) {
-    getDocument(this.props.sourceId).removeLineClass(
-      line - 1,
-      "line",
-      "new-debug-line"
-    );
+  clearDebugLine(selectedFrame) {
+    console.log(this.props, selectedFrame);
+    if (this.props.editor && selectedFrame) {
+      const { line } = selectedFrame.location;
+      if (debugExpression) {
+        debugExpression.clear();
+      }
+
+      this.props.editor.codeMirror.removeLineClass(
+        line,
+        "line",
+        "new-debug-line"
+      );
+    }
   }
 
-  setDebugLine(line: number) {
-    getDocument(this.props.sourceId).addLineClass(
-      line - 1,
-      "line",
-      "new-debug-line"
-    );
+  setDebugLine(selectedFrame, selectedLocation) {
+    if (
+      this.props.editor &&
+      selectedFrame &&
+      selectedLocation &&
+      selectedFrame.location.sourceId === selectedLocation.sourceId
+    ) {
+      const { location, sourceId } = selectedFrame;
+      const { line, column } = toEditorPosition(sourceId, location);
+
+      this.props.editor.codeMirror.addLineClass(line, "line", "new-debug-line");
+
+      debugExpression = markText(this.props.editor, "debug-expression", {
+        start: { line, column },
+        end: { line, column: null }
+      });
+    }
   }
 
   render() {

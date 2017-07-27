@@ -67,6 +67,7 @@ import {
   updateSelection,
   lineAtHeight,
   toSourceLine,
+  toEditorLine,
   toEditorRange,
   resetLineNumberFormat
 } from "../../utils/editor";
@@ -118,7 +119,7 @@ class Editor extends PureComponent {
     // This lifecycle method is responsible for updating the editor
     // text.
 
-    const { selectedSource, selectedLocation } = nextProps;
+    const { selectedSource } = nextProps;
 
     if (
       nextProps.startPanelSize !== this.props.startPanelSize ||
@@ -478,71 +479,6 @@ class Editor extends PureComponent {
     return !!this.cbPanel;
   }
 
-  toggleBreakpoint(line, column = undefined) {
-    const {
-      selectedSource,
-      selectedLocation,
-      breakpoints,
-      addBreakpoint,
-      removeBreakpoint
-    } = this.props;
-    const bp = breakpointAtLocation(breakpoints, { line, column });
-
-    if ((bp && bp.loading) || !selectedLocation || !selectedSource) {
-      return;
-    }
-
-    const { sourceId } = selectedLocation;
-
-    if (bp) {
-      removeBreakpoint({
-        sourceId: sourceId,
-        line: line + 1,
-        column: column
-      });
-    } else {
-      addBreakpoint(
-        {
-          sourceId: sourceId,
-          sourceUrl: selectedSource.get("url"),
-          line: line + 1,
-          column: column
-        },
-        // Pass in a function to get line text because the breakpoint
-        // may slide and it needs to compute the value at the new
-        // line.
-        { getTextForLine: l => getTextForLine(this.editor.codeMirror, l) }
-      );
-    }
-  }
-
-  toggleBreakpointDisabledStatus(line) {
-    const bp = breakpointAtLocation(this.props.breakpoints, { line });
-    const { selectedLocation } = this.props;
-
-    if ((bp && bp.loading) || !selectedLocation) {
-      return;
-    }
-
-    const { sourceId } = selectedLocation;
-
-    if (!bp) {
-      throw new Error("attempt to disable breakpoint that does not exist");
-    }
-
-    if (!bp.disabled) {
-      this.props.disableBreakpoint({
-        sourceId: sourceId,
-        line: line + 1
-      });
-    } else {
-      this.props.enableBreakpoint({
-        sourceId: sourceId,
-        line: line + 1
-      });
-    }
-  }
-
   // If the location has changed and a specific line is requested,
   // move to that line and flash it.
   highlightLine() {
@@ -666,10 +602,12 @@ class Editor extends PureComponent {
   renderDebugLine() {
     const { selectedFrame, selectedSource } = this.props;
 
-    if (selectedSource && !selectedSource.get("loading") && selectedFrame) {
+    if (selectedSource && !selectedSource.get("loading")) {
       return DebugLine({
         sourceId: selectedSource.get("id"),
-        line: this.props.selectedFrame.location.line
+        selectedFrame: this.props.selectedFrame,
+        selectedLocation: this.props.selectedLocation,
+        editor: this.state.editor
       });
     }
   }
