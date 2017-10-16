@@ -35,6 +35,8 @@ function getMenuItems(
     onGutterContextMenu,
     jumpToMappedLocation,
     toggleBlackBox,
+    addSandbox,
+    clearSandbox,
     addExpression,
     getFunctionText,
     getFunctionLocation,
@@ -146,6 +148,24 @@ function getMenuItems(
     }
   };
 
+  const sandboxSelection = {
+    id: "node-menu-sandbox",
+    label: "sand box selection",
+    accesskey: "y",
+    click: () => {
+      const text = editor.codeMirror.getSelection();
+      const start = editor.codeMirror.getCursor(text).line;
+      addSandbox(text, start);
+    }
+  };
+
+  const clearSandboxItem = {
+    id: "node-menu-sandbox-clear",
+    label: "clear sandbox",
+    accesskey: "y",
+    click: () => clearSandbox()
+  };
+
   const menuItems = [
     copySource,
     copySourceUri2,
@@ -153,7 +173,10 @@ function getMenuItems(
     { type: "separator" },
     jumpLabel,
     showSourceMenuItem,
-    blackBoxMenuItem
+    blackBoxMenuItem,
+    { type: "separator" },
+    sandboxSelection,
+    clearSandboxItem
   ];
 
   if (textSelected) {

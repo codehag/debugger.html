@@ -21,6 +21,7 @@ import coverage from "./coverage";
 import projectTextSearch from "./project-text-search";
 import quickOpen from "./quick-open";
 import sourceTree from "./source-tree";
+import sandbox from "./sandbox";
 import debuggee from "./debuggee";
 
 export default {
@@ -38,5 +39,6 @@ export default {
   projectTextSearch,
   quickOpen,
   sourceTree,
+  sandbox,
   debuggee
 };

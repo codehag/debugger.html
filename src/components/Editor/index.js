@@ -41,6 +41,7 @@ import GutterMenu from "./GutterMenu";
 import EditorMenu from "./EditorMenu";
 import ConditionalPanel from "./ConditionalPanel";
 import type { SourceMetaDataType } from "../../reducers/ast";
+import Sandbox from "./Sandbox";
 
 import {
   showSourceText,
@@ -572,6 +573,7 @@ class Editor extends PureComponent<Props, State> {
         <EditorMenu editor={editor} />
         <GutterMenu editor={editor} />
         <ConditionalPanel editor={editor} />
+        <Sandbox editor={editor} />
         {this.renderHitCounts()}
       </div>
     );
