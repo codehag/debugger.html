@@ -26,6 +26,7 @@ import { prefs } from "../utils/prefs";
 import { removeDocument } from "../utils/editor";
 import { isThirdParty, isMinified, shouldPrettyPrint } from "../utils/source";
 import { getGeneratedLocation } from "../utils/source-maps";
+import { Services } from "devtools-modules";
 
 import {
   getSource,
@@ -196,6 +197,9 @@ export function selectSource(id: string, options: SelectSourceOptions = {}) {
     if (activeSearch !== "file") {
       dispatch(closeActiveSearch());
     }
+
+    // new_debugger
+    Services.telemetry.scalarAdd("devtools.debugger.source_selected", 1);
 
     dispatch(addTab(source.toJS(), 0));
 

@@ -11,6 +11,8 @@ import { setSource } from "../../workers/parser";
 import type { Source } from "../../types";
 import type { ThunkArgs } from "../types";
 
+import { Services } from "devtools-modules";
+
 async function loadSource(source: Source, { sourceMaps, client }) {
   if (sourceMaps.isOriginalId(source.id)) {
     return await sourceMaps.getOriginalSourceText(source);
@@ -46,6 +48,12 @@ export function loadSourceText(source: Source) {
     if (newSource.isWasm) {
       return;
     }
+
+    const delay = 300;
+    let histogram = Services.telemetry.getHistogramById(
+      "devtools.debugger.load_source"
+    );
+    histogram.add(delay);
 
     await setSource(newSource);
     dispatch(setSymbols(source.id));

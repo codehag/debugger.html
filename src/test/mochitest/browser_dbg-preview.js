@@ -65,4 +65,7 @@ add_task(async function() {
   await popupPreviewed;
   assertPopup(dbg, { field: "foo", value: "1", expression: "obj" });
   assertPopup(dbg, { field: "bar", value: "2", expression: "obj" });
+
+  await waitForLoadedObjects(dbg)
+  await resume(dbg)
 });
