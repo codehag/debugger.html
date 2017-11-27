@@ -1,0 +1,12 @@
+devtools.debugger:
+  source_selected:
+    bug_numbers:
+      - ???
+    description: Number of times a source is selected
+    expires: never
+    kind: uint
+    notification_emails:
+      - dev-developer-tools@lists.mozilla.org
+    release_channel_collection: opt-out
+    record_in_processes:
+      - 'main'

@@ -1,0 +1,10 @@
+{
+  "DEVTOOLS_DEBUGGER_LOAD_SOURCE": {
+    "record_in_processes": ["main", "content"],
+    "expires_in_version": "never",
+    "kind": "exponential",
+    "high": 10000,
+    "n_buckets": 1000,
+    "description": "The time (in milliseconds) that it took to load a source for the user."
+  }
+}

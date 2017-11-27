@@ -19,6 +19,7 @@
 * [Configs](#configs)
 * [Workers](#workers)
   * [Adding a Task](#adding-a-task)
+* [Telemetry](#telemetry)
 * [Hot Reloading](#hot-reloading-fire)
 * [Contributing to other packages](#contributing-to-other-packages)
 * [Errors](#errors)
@@ -702,6 +703,32 @@ index a390df2..c610c1a 100644
 +    }
 +
 ```
+
+### Telemetry
+
+Telemetry is the mozilla system for gathering usage metrics.
+There are two mechanisms available: Scalars, Histograms. The [docs][tel-docs] have in depth information.
+
+* **Scalars**: Count of an event
+* **Histograms**: Distribution of an event
+
+```js
+let loadSourceHistogram = Services.telemetry.getHistogramById(
+  "DEVTOOLS_DEBUGGER_LOAD_SOURCE"
+);
+loadSourceHistogram.add(delay) // time it took to load the source
+```
+
+```js
+Services.telemetry.scalarAdd("devtools.debugger.source_selected", 1);
+```
+
+When you add a new scalar or histograms, you'll need to add it to the
+[histograms.json] or [scalars.yml].
+
+[histograms.json]: ../assets/panel/Histograms.json
+[scalars.yaml]: ../assets/panel/Scalars.yaml
+[tel-docs]: https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/telemetry/collection/index.html
 
 ### Hot Reloading :fire:
 
