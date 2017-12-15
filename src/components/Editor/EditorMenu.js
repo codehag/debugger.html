@@ -216,6 +216,8 @@ class EditorMenu extends PureComponent {
 
 const {
   addExpression,
+  addSandbox,
+  clearSandbox,
   jumpToMappedLocation,
   toggleBlackBox,
   setContextMenu,
@@ -250,6 +252,8 @@ export default connect(
     toggleBlackBox,
     setContextMenu,
     showSource,
+    addSandbox,
+    clearSandbox,
     flashLineRange
   }
 )(EditorMenu);

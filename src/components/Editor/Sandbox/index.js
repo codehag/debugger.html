@@ -38,14 +38,19 @@ class Sandbox extends PureComponent {
     console.log("slowmo");
   };
 
-  clearSandbox() {
-    const { start, end, selectedLocation, editor } = this.props;
+  onClear = () => {
+    this.props.clearSandbox();
+  };
+
+  clearSandbox(prevProps) {
+    const { start, end, selectedLocation, editor } = prevProps;
     const { codeMirror } = editor;
 
+    console.log("clear", start, end);
     const doc = getDocument(selectedLocation.sourceId);
     if (!doc) {
       range(start, end).forEach(line => {
-        codeMirror.addLineClass(line, "line", "highlight-lines");
+        codeMirror.removeLineClass(line, "line", "highlight-lines");
       });
       return;
     }
@@ -59,7 +64,6 @@ class Sandbox extends PureComponent {
     const { start, end, selectedLocation, editor } = props;
     const { codeMirror } = editor;
 
-    console.log(start, end);
     const doc = getDocument(selectedLocation.sourceId);
     if (!doc) {
       range(start, end).forEach(line => {
@@ -74,11 +78,12 @@ class Sandbox extends PureComponent {
   }
 
   componentWillUpdate(nextProps: Props) {
+    console.log(nextProps);
     if (nextProps.start) {
       this.showSandbox(nextProps);
       return this.renderToWidget(nextProps);
     }
-    this.clearSandbox();
+    this.clearSandbox(this.props);
     return this.clearWidget();
   }
 
