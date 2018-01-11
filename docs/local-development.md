@@ -707,7 +707,11 @@ index a390df2..c610c1a 100644
 ### Telemetry
 
 Telemetry is the mozilla system for gathering usage metrics.
-There are two mechanisms available: Scalars, Histograms. The [docs][tel-docs] have in depth information.
+The [Telemetry documentation][tel-docs] has in depth information, as well as a walk through of how
+to create new telemetry probes.
+
+There are two mechanisms available: Scalars, Histograms. Histograms are older, and Scalars is the
+new prefered method. However Scalars cannot do everything, so both are used.
 
 * **Scalars**: Count of an event
 * **Histograms**: Distribution of an event
@@ -723,12 +727,18 @@ loadSourceHistogram.add(delay) // time it took to load the source
 Services.telemetry.scalarAdd("devtools.debugger.source_selected", 1);
 ```
 
-When you add a new scalar or histograms, you'll need to add it to the
-[histograms.json] or [scalars.yml].
+When you add a new scalar or histogram, you'll need to add it to the
+[local histograms.json][localhistograms.json] or [local scalars.yml][localscalars.yaml]. This needs to be moved to MC,
+to the [histograms.json] and [scalars.yaml], as it needs a bug number and the questionaire (called
+[request][request-template] template) mentioned in the [telemetry documentation][telemetry-mc].
 
-[histograms.json]: ../assets/panel/Histograms.json
-[scalars.yaml]: ../assets/panel/Scalars.yaml
+[localhistograms.json]: ../assets/panel/Histograms.json
+[localscalars.yaml]: ../assets/panel/Scalars.yaml
+[histograms.json]: https://searchfox.org/mozilla-central/source/toolkit/components/telemetry/Histograms.json
+[scalars.yaml]: https://searchfox.org/mozilla-central/source/toolkit/components/telemetry/Scalars.yaml
 [tel-docs]: https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/telemetry/collection/index.html
+[telemetry-mc]: https://wiki.mozilla.org/Firefox/Data_Collection
+[review-template]: https://github.com/mozilla/data-review/blob/master/request.md
 
 ### Hot Reloading :fire:
 

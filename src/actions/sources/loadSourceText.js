@@ -38,6 +38,7 @@ async function loadSource(source: Source, { sourceMaps, client }) {
 export function loadSourceText(source: Source) {
   return async ({ dispatch, getState, client, sourceMaps }: ThunkArgs) => {
     // Fetch the source text only once.
+    const start = performance.now();
     if (source.text) {
       return Promise.resolve(source);
     }
@@ -53,8 +54,9 @@ export function loadSourceText(source: Source) {
       return;
     }
 
-    const delay = 300;
-    loadSourceHistogram.add(delay);
+    const end = performance.now();
+    const duration = end - start;
+    loadSourceHistogram.add(duration);
 
     await setSource(newSource);
     dispatch(setSymbols(source.id));
